@@ -7,7 +7,6 @@ import os
 
 
 class Config(object):
-
     def __init__(self,
                  migration_file,
                  database,
@@ -18,6 +17,7 @@ class Config(object):
                  mode=None,
                  allow_serie=False,
                  force_version=None,
+                 override_translations=False,
                  web_host='localhost',
                  web_port=8069,
                  web_resp_status=503,
@@ -35,6 +35,7 @@ class Config(object):
         self.force_version = force_version
         if force_version and not allow_serie:
             self.allow_serie = True
+        self.override_translations = override_translations
         self.web_host = web_host
         self.web_port = web_port
         self.web_resp_status = web_resp_status
@@ -60,6 +61,7 @@ class Config(object):
                    mode=args.mode,
                    allow_serie=args.allow_serie,
                    force_version=args.force_version,
+                   override_translations=args.override_translations,
                    web_host=args.web_host,
                    web_port=args.web_port,
                    web_resp_status=args.web_resp_status,
@@ -98,102 +100,132 @@ class BoolEnvDefault(EnvDefault):
 
 def get_args_parser():
     """Return a parser for command line options."""
-    parser = argparse.ArgumentParser(
-        description='Marabunta: Migrating ants for Odoo')
-    parser.add_argument('--migration-file', '-f',
-                        action=EnvDefault,
-                        envvar='MARABUNTA_MIGRATION_FILE',
-                        required=True,
-                        help='The yaml file containing the migration steps')
-    parser.add_argument('--database', '-d',
-                        action=EnvDefault,
-                        envvar='MARABUNTA_DATABASE',
-                        required=True,
-                        help="Odoo's database")
-    parser.add_argument('--db-user', '-u',
-                        action=EnvDefault,
-                        envvar='MARABUNTA_DB_USER',
-                        required=True,
-                        help="Odoo's database user")
-    parser.add_argument('--db-password', '-w',
-                        action=EnvDefault,
-                        envvar='MARABUNTA_DB_PASSWORD',
-                        required=False,
-                        help="Odoo's database password")
-    parser.add_argument('--db-port', '-p',
-                        type=int,
-                        default=os.environ.get('MARABUNTA_DB_PORT', 5432),
-                        help="Odoo's database port")
-    parser.add_argument('--db-host', '-H',
-                        default=os.environ.get('MARABUNTA_DB_HOST',
-                                               None),
-                        help="Odoo's database host")
-    parser.add_argument('--mode',
-                        action=EnvDefault,
-                        envvar='MARABUNTA_MODE',
-                        required=False,
-                        help="Specify the mode in which we run the migration,"
-                             "such as 'sample' or 'full'. Additional operations "
-                             "of this mode will be executed after the main "
-                             "operations and the addons list of this mode "
-                             "will be merged with the main addons list.")
-    parser.add_argument('--allow-serie',
-                        action=BoolEnvDefault,
-                        required=False,
-                        envvar='MARABUNTA_ALLOW_SERIE',
-                        help='Allow to run more than 1 version upgrade at a '
-                             'time.')
-    parser.add_argument('--force-version',
-                        required=False,
-                        default=os.environ.get('MARABUNTA_FORCE_VERSION'),
-                        help='Force upgrade of a version, even if it has '
-                             'already been applied.')
+    parser = argparse.ArgumentParser(description="Marabunta: Migrating ants for Odoo")
+    parser.add_argument(
+        "--migration-file",
+        "-f",
+        action=EnvDefault,
+        envvar="MARABUNTA_MIGRATION_FILE",
+        required=True,
+        help="The yaml file containing the migration steps",
+    )
+    parser.add_argument(
+        "--database",
+        "-d",
+        action=EnvDefault,
+        envvar="MARABUNTA_DATABASE",
+        required=True,
+        help="Odoo's database",
+    )
+    parser.add_argument(
+        "--db-user",
+        "-u",
+        action=EnvDefault,
+        envvar="MARABUNTA_DB_USER",
+        required=True,
+        help="Odoo's database user",
+    )
+    parser.add_argument(
+        "--db-password",
+        "-w",
+        action=EnvDefault,
+        envvar="MARABUNTA_DB_PASSWORD",
+        required=False,
+        help="Odoo's database password",
+    )
+    parser.add_argument(
+        "--db-port",
+        "-p",
+        type=int,
+        default=os.environ.get("MARABUNTA_DB_PORT", 5432),
+        help="Odoo's database port",
+    )
+    parser.add_argument(
+        "--db-host",
+        "-H",
+        default=os.environ.get("MARABUNTA_DB_HOST", None),
+        help="Odoo's database host",
+    )
+    parser.add_argument(
+        "--mode",
+        action=EnvDefault,
+        envvar="MARABUNTA_MODE",
+        required=False,
+        help="Specify the mode in which we run the migration,"
+        "such as 'sample' or 'full'. Additional operations "
+        "of this mode will be executed after the main "
+        "operations and the addons list of this mode "
+        "will be merged with the main addons list.",
+    )
+    parser.add_argument(
+        "--allow-serie",
+        action=BoolEnvDefault,
+        required=False,
+        envvar="MARABUNTA_ALLOW_SERIE",
+        help="Allow to run more than 1 version upgrade at a " "time.",
+    )
+    parser.add_argument(
+        "--force-version",
+        required=False,
+        default=os.environ.get("MARABUNTA_FORCE_VERSION"),
+        help="Force upgrade of a version, even if it has " "already been applied.",
+    )
+    parser.add_argument(
+        "--override-translations",
+        required=False,
+        default=os.environ.get("MARABUNTA_OVERRIDE_TRANSLATIONS"),
+        help="Force override of translations.",
+    )
 
     group = parser.add_argument_group(
-        title='Web',
-        description='Configuration related to the internal web server, '
-                    'used to publish a maintenance page during the migration.',
+        title="Web",
+        description="Configuration related to the internal web server, "
+        "used to publish a maintenance page during the migration.",
     )
-    group.add_argument('--web-host',
-                       required=False,
-                       default=os.environ.get('MARABUNTA_WEB_HOST', '0.0.0.0'),
-                       help='Host for the web server')
-    group.add_argument('--web-port',
-                       type=int,
-                       required=False,
-                       default=os.environ.get('MARABUNTA_WEB_PORT', 8069),
-                       help='Port for the web server')
-    group.add_argument('--web-resp-status',
-                       type=int,
-                       required=False,
-                       default=os.environ.get(
-                           'MARABUNTA_WEB_RESP_STATUS', 503
-                       ),
-                       help='Response HTTP status code of the web server')
-    group.add_argument('--web-resp-retry-after',
-                       type=int,
-                       required=False,
-                       default=os.environ.get(
-                           'MARABUNTA_WEB_RESP_RETRY_AFTER', 300
-                       ),
-                       help=(
-                           '"Retry-After" header value (in seconds) of '
-                           'response delivered by the web server')
-                       )
-    group.add_argument('--web-custom-html',
-                       required=False,
-                       default=os.environ.get(
-                           'MARABUNTA_WEB_CUSTOM_HTML'
-                       ),
-                       help='Path to a custom html file to publish')
-    group.add_argument('--web-healthcheck-path',
-                       required=False,
-                       default=os.environ.get(
-                           'MARABUNTA_WEB_HEALTHCHECK_PATH'
-                       ),
-                       help=(
-                           'URL Path used for health checks HTTP requests. '
-                           'Such monitoring requests will return HTTP 200 '
-                           'status code instead of the default 503.'
-                       ))
+    group.add_argument(
+        "--web-host",
+        required=False,
+        default=os.environ.get("MARABUNTA_WEB_HOST", "0.0.0.0"),
+        help="Host for the web server",
+    )
+    group.add_argument(
+        "--web-port",
+        type=int,
+        required=False,
+        default=os.environ.get("MARABUNTA_WEB_PORT", 8069),
+        help="Port for the web server",
+    )
+    group.add_argument(
+        "--web-resp-status",
+        type=int,
+        required=False,
+        default=os.environ.get("MARABUNTA_WEB_RESP_STATUS", 503),
+        help="Response HTTP status code of the web server",
+    )
+    group.add_argument(
+        "--web-resp-retry-after",
+        type=int,
+        required=False,
+        default=os.environ.get("MARABUNTA_WEB_RESP_RETRY_AFTER", 300),
+        help=(
+            '"Retry-After" header value (in seconds) of '
+            "response delivered by the web server"
+        ),
+    )
+    group.add_argument(
+        "--web-custom-html",
+        required=False,
+        default=os.environ.get("MARABUNTA_WEB_CUSTOM_HTML"),
+        help="Path to a custom html file to publish",
+    )
+    group.add_argument(
+        "--web-healthcheck-path",
+        required=False,
+        default=os.environ.get("MARABUNTA_WEB_HEALTHCHECK_PATH"),
+        help=(
+            "URL Path used for health checks HTTP requests. "
+            "Such monitoring requests will return HTTP 200 "
+            "status code instead of the default 503."
+        ),
+    )
     return parser

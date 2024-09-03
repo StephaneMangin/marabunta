@@ -16,7 +16,6 @@ from .version import MarabuntaVersion
 
 
 class Migration(object):
-
     def __init__(self, versions, options):
         self._versions = versions
         self.options = options
@@ -27,7 +26,6 @@ class Migration(object):
 
 
 class MigrationOption(object):
-
     def __init__(self, install_command=None, install_args=None, backup=None):
         """Options block in a migration.
 
@@ -38,13 +36,12 @@ class MigrationOption(object):
         :param backup: Backup options
         :type backup: Dict
         """
-        self.install_command = install_command or u'odoo'
-        self.install_args = install_args or u''
+        self.install_command = install_command or "odoo"
+        self.install_args = install_args or ""
         self.backup = backup
 
 
 class MigrationBackupOption(object):
-
     def __init__(self, command, ignore_if, stop_on_failure=True):
         """Backup option in migration.
 
@@ -92,15 +89,14 @@ class MigrationBackupOption(object):
     def ignore_if_operation(self):
         if self._ignore_if is None or self._ignore_if is False:
             # if ignore_if parameter was not specified - always backup
-            return SilentOperation('false', shell=True)
+            return SilentOperation("false", shell=True)
         elif self._ignore_if is True:
             # if it is specifically True
-            return SilentOperation('true', shell=True)
+            return SilentOperation("true", shell=True)
         return SilentOperation(self._ignore_if, shell=True)
 
 
 class Version(object):
-
     def __init__(self, number, options):
         """Base class for a migration version.
 
@@ -112,13 +108,12 @@ class Version(object):
         try:
             MarabuntaVersion().parse(number)
         except ValueError:
-            raise ConfigurationError(
-                u'{} is not a valid version'.format(number)
-            )
+            raise ConfigurationError("{} is not a valid version".format(number))
         self.number = number
         self._version_modes = {}
         self.options = options
         self.backup = False
+        self.override_translations = False
 
     def is_processed(self, db_versions):
         """Check if version is already applied in the database.
@@ -210,7 +205,7 @@ class Version(object):
         to_install = addons_list - installed
         to_upgrade = installed & addons_list
 
-        return UpgradeAddonsOperation(self.options, to_install, to_upgrade)
+        return UpgradeAddonsOperation(self.options, to_install, to_upgrade, self.override_translations)
 
     def remove_addons_operation(self):
         raise NotImplementedError
@@ -252,10 +247,11 @@ class VersionMode(object):
 
 class UpgradeAddonsOperation(object):
 
-    def __init__(self, options, to_install, to_upgrade):
+    def __init__(self, options, to_install, to_upgrade, override_translations=False):
         self.options = options
         self.to_install = set(to_install)
         self.to_upgrade = set(to_upgrade)
+        self.override_translations = override_translations
 
     def operation(self, exclude_addons=None):
         if exclude_addons is None:
@@ -263,6 +259,8 @@ class UpgradeAddonsOperation(object):
         install_command = self.options.install_command
         install_args = self.options.install_args[:] or []
         install_args += [u'--workers=0', u'--stop-after-init', u'--no-xmlrpc']
+        if self.override_translations:
+            install_args += [u'--i18n-override']
 
         to_install = self.to_install - exclude_addons
         if to_install:
